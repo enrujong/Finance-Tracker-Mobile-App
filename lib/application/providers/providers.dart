@@ -1,7 +1,45 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:finance_app/data/db/drift_database.dart';
 import 'package:finance_app/data/repositories/transaction_repository.dart';
-import 'package:finance_app/application/usecases/date_range_utils.dart';
+// Date range utilities (moved here to avoid missing file import)
+enum RangeType { daily, weekly, monthly, yearly }
+
+class DateRangeModel {
+  final DateTime start;
+  final DateTime end;
+  DateRangeModel(this.start, this.end);
+}
+
+class DateRangeUtils {
+  static DateRangeModel getRangeFor(RangeType rangeType) {
+    final now = DateTime.now();
+    DateTime start;
+    DateTime end;
+    switch (rangeType) {
+      case RangeType.daily:
+        start = DateTime(now.year, now.month, now.day);
+        end = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+        break;
+      case RangeType.weekly:
+        final weekday = now.weekday; // 1 = Monday
+        start = DateTime(now.year, now.month, now.day).subtract(Duration(days: weekday - 1));
+        end = start.add(Duration(days: 6, hours: 23, minutes: 59, seconds: 59, milliseconds: 999));
+        break;
+      case RangeType.monthly:
+        start = DateTime(now.year, now.month, 1);
+        final nextMonth = (now.month == 12)
+            ? DateTime(now.year + 1, 1, 1)
+            : DateTime(now.year, now.month + 1, 1);
+        end = nextMonth.subtract(Duration(milliseconds: 1));
+        break;
+      case RangeType.yearly:
+        start = DateTime(now.year, 1, 1);
+        end = DateTime(now.year, 12, 31, 23, 59, 59, 999);
+        break;
+    }
+    return DateRangeModel(start, end);
+  }
+}
 
 // DB provider
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
